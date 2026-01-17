@@ -7,36 +7,6 @@
 
 namespace
 {
-	bool is_symlink_a(std::string const &path)
-	{
-		HANDLE h = CreateFileA(path.c_str(),
-							   0,
-							   FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-							   nullptr,
-							   OPEN_EXISTING,
-							   FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS,
-							   nullptr);
-
-		if (h == INVALID_HANDLE_VALUE)
-		{
-			return false;
-		}
-
-		FILE_ATTRIBUTE_TAG_INFO info;
-		bool result = false;
-
-		if (GetFileInformationByHandleEx(h,
-										 FileAttributeTagInfo,
-										 &info,
-										 sizeof(info)))
-		{
-			result = (info.ReparseTag == IO_REPARSE_TAG_SYMLINK);
-		}
-
-		CloseHandle(h);
-		return result;
-	}
-
 	std::string read_symlink_resolved_a(std::string const &path)
 	{
 		HANDLE h = CreateFileA(path.c_str(),
@@ -150,7 +120,7 @@ int main(int argc, char **argv)
 	std::cout << "源路径：" << parser.SrcPath() << std::endl;
 	std::cout << "目标路径：" << parser.DstPath() << std::endl;
 
-	if (is_symlink_a(parser.SrcPath().ToString()))
+	if (base::filesystem::IsSymbolicLink(parser.SrcPath()))
 	{
 		std::cout << "源路径是符号链接" << std::endl;
 		std::cout << read_symlink_resolved_a(parser.SrcPath().ToString()) << std::endl;
