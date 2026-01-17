@@ -7,45 +7,6 @@
 
 namespace
 {
-	std::string read_symlink_resolved_a(std::string const &path)
-	{
-		HANDLE h = CreateFileA(path.c_str(),
-							   0,
-							   FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-							   nullptr,
-							   OPEN_EXISTING,
-							   FILE_FLAG_BACKUP_SEMANTICS,
-							   nullptr);
-
-		if (h == INVALID_HANDLE_VALUE)
-		{
-			throw std::runtime_error{"CreateFileA failed"};
-		}
-
-		char buffer[MAX_PATH];
-
-		DWORD len = GetFinalPathNameByHandleA(h,
-											  buffer,
-											  MAX_PATH,
-											  FILE_NAME_NORMALIZED);
-
-		CloseHandle(h);
-
-		if (len == 0 || len >= MAX_PATH)
-		{
-			throw std::runtime_error{"GetFinalPathNameByHandleA failed"};
-		}
-
-		std::string result(buffer);
-
-		// 去掉 \\?\ 前缀
-		std::string const prefix = "\\\\?\\";
-		if (result.rfind(prefix, 0) == 0)
-			result.erase(0, prefix.size());
-
-		return result;
-	}
-
 	void create_symlink_a(std::string const &target,
 						  std::string const &link_path,
 						  bool is_directory)
@@ -123,7 +84,7 @@ int main(int argc, char **argv)
 	if (base::filesystem::IsSymbolicLink(parser.SrcPath()))
 	{
 		std::cout << "源路径是符号链接" << std::endl;
-		std::cout << read_symlink_resolved_a(parser.SrcPath().ToString()) << std::endl;
+		std::cout << base::filesystem::ReadSymboliclink(parser.SrcPath()) << std::endl;
 	}
 
 	// base::filesystem::Copy(parser.SrcPath(),
