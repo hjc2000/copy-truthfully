@@ -3,9 +3,94 @@
 #include "CLI/CLI.hpp"
 #include <iostream>
 #include <string>
+#include <windows.h>
 
 namespace
 {
+	bool is_symlink_a(std::string const &path)
+	{
+		HANDLE h = CreateFileA(path.c_str(),
+							   0,
+							   FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+							   nullptr,
+							   OPEN_EXISTING,
+							   FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS,
+							   nullptr);
+
+		if (h == INVALID_HANDLE_VALUE)
+		{
+			return false;
+		}
+
+		FILE_ATTRIBUTE_TAG_INFO info;
+		bool result = false;
+
+		if (GetFileInformationByHandleEx(h,
+										 FileAttributeTagInfo,
+										 &info,
+										 sizeof(info)))
+		{
+			result = (info.ReparseTag == IO_REPARSE_TAG_SYMLINK);
+		}
+
+		CloseHandle(h);
+		return result;
+	}
+
+	std::string read_symlink_resolved_a(std::string const &path)
+	{
+		HANDLE h = CreateFileA(path.c_str(),
+							   0,
+							   FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+							   nullptr,
+							   OPEN_EXISTING,
+							   FILE_FLAG_BACKUP_SEMANTICS,
+							   nullptr);
+
+		if (h == INVALID_HANDLE_VALUE)
+		{
+			throw std::runtime_error{"CreateFileA failed"};
+		}
+
+		char buffer[MAX_PATH];
+
+		DWORD len = GetFinalPathNameByHandleA(h,
+											  buffer,
+											  MAX_PATH,
+											  FILE_NAME_NORMALIZED);
+
+		CloseHandle(h);
+
+		if (len == 0 || len >= MAX_PATH)
+		{
+			throw std::runtime_error{"GetFinalPathNameByHandleA failed"};
+		}
+
+		std::string result(buffer);
+
+		// 去掉 \\?\ 前缀
+		std::string const prefix = "\\\\?\\";
+		if (result.rfind(prefix, 0) == 0)
+			result.erase(0, prefix.size());
+
+		return result;
+	}
+
+	void create_symlink_a(std::string const &target,
+						  std::string const &link_path,
+						  bool is_directory)
+	{
+		DWORD flags = is_directory ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0;
+		flags |= SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
+
+		if (!CreateSymbolicLinkA(link_path.c_str(),
+								 target.c_str(),
+								 flags))
+		{
+			throw std::runtime_error("CreateSymbolicLinkA failed");
+		}
+	}
+
 	class Parser
 	{
 	private:
@@ -65,9 +150,15 @@ int main(int argc, char **argv)
 	std::cout << "源路径：" << parser.SrcPath() << std::endl;
 	std::cout << "目标路径：" << parser.DstPath() << std::endl;
 
-	base::filesystem::Copy(parser.SrcPath(),
-						   parser.DstPath(),
-						   base::filesystem::OverwriteOption::Overwrite);
+	if (is_symlink_a(parser.SrcPath().ToString()))
+	{
+		std::cout << "源路径是符号链接" << std::endl;
+		std::cout << read_symlink_resolved_a(parser.SrcPath().ToString()) << std::endl;
+	}
+
+	// base::filesystem::Copy(parser.SrcPath(),
+	// 					   parser.DstPath(),
+	// 					   base::filesystem::OverwriteOption::Overwrite);
 
 	return 0;
 }
