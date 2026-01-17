@@ -65,5 +65,9 @@ int main(int argc, char **argv)
 	std::cout << "源路径：" << parser.SrcPath() << std::endl;
 	std::cout << "目标路径：" << parser.DstPath() << std::endl;
 
+	base::filesystem::Copy(parser.SrcPath(),
+						   parser.DstPath(),
+						   base::filesystem::OverwriteOption::Overwrite);
+
 	return 0;
 }
