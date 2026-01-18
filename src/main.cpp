@@ -40,10 +40,7 @@ namespace
 			app.parse(argc, argv);
 
 			_src_path = src_path_string;
-			_src_path = base::filesystem::ToAbsolutePath(_src_path);
-
 			_dst_path = dst_path_string;
-			_dst_path = base::filesystem::ToAbsolutePath(_dst_path);
 		}
 
 		base::Path const &SrcPath() const
