@@ -7,21 +7,6 @@
 
 namespace
 {
-	void create_symlink_a(std::string const &target,
-						  std::string const &link_path,
-						  bool is_directory)
-	{
-		DWORD flags = is_directory ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0;
-		flags |= SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
-
-		if (!CreateSymbolicLinkA(link_path.c_str(),
-								 target.c_str(),
-								 flags))
-		{
-			throw std::runtime_error("CreateSymbolicLinkA failed");
-		}
-	}
-
 	class Parser
 	{
 	private:
@@ -81,15 +66,9 @@ int main(int argc, char **argv)
 	std::cout << "源路径：" << parser.SrcPath() << std::endl;
 	std::cout << "目标路径：" << parser.DstPath() << std::endl;
 
-	if (base::filesystem::IsSymbolicLink(parser.SrcPath()))
-	{
-		std::cout << "源路径是符号链接" << std::endl;
-		std::cout << base::filesystem::ReadSymboliclink(parser.SrcPath()) << std::endl;
-	}
-
-	// base::filesystem::Copy(parser.SrcPath(),
-	// 					   parser.DstPath(),
-	// 					   base::filesystem::OverwriteOption::Overwrite);
+	base::filesystem::Copy(parser.SrcPath(),
+						   parser.DstPath(),
+						   base::filesystem::OverwriteOption::Overwrite);
 
 	return 0;
 }
